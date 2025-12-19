@@ -2,192 +2,80 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>我的Flash游戏</title>
-    <!-- 使用稳定的CDN源 -->
-    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Arial', sans-serif;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
-            width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        .subtitle {
-            font-size: 1.1em;
-            opacity: 0.9;
-            margin-bottom: 30px;
-        }
-        .game-box {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-        }
-        .status {
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        .status.loading {
-            color: #4ade80;
-            background: rgba(74, 222, 128, 0.1);
-        }
-        .status.error {
-            color: #f87171;
-            background: rgba(248, 113, 113, 0.1);
-        }
-        .status.success {
-            color: #60a5fa;
-            background: rgba(96, 165, 250, 0.1);
-        }
-        .controls {
-            margin-top: 20px;
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        button {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 50px;
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
-        }
-        button:active {
-            transform: translateY(0);
-        }
-        .note {
-            margin-top: 25px;
-            font-size: 0.9em;
-            opacity: 0.8;
-            line-height: 1.5;
-        }
-        a {
-            color: #93c5fd;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>Flash Player</title>
+    <!-- 使用固定版本Ruffle，避免最新版不兼容 -->
+    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@2024.10.14"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>🎮 Flash游戏在线播放器</h1>
-        <p class="subtitle">基于Ruffle技术 · 无需Flash插件 · 现代浏览器支持</p>
-        
-        <div class="status loading" id="statusText">
-            🟡 正在初始化Ruffle播放器...
-        </div>
-
-        <div class="game-box">
-            <!-- 游戏播放器核心 -->
-            <ruffle-player id="gamePlayer" width="800" height="600">
-                <a href="d1.swf"></a>
-            </ruffle-player>
-        </div>
-
-        <div class="controls">
-            <button onclick="location.reload()">🔄 刷新页面</button>
-            <button onclick="fullscreen()">📺 全屏模式</button>
-            <button onclick="checkStatus()">🔍 检查状态</button>
-        </div>
-
-        <div class="note">
-            <p>💡 如果游戏未显示，请确保：</p>
-            <p>1. 游戏文件 <strong>d1.swf</strong> 已上传至仓库根目录</p>
-            <p>2. 等待Ruffle完全加载（首次加载可能需要几秒钟）</p>
-            <p>3. 如遇问题，请尝试刷新页面或使用其他浏览器</p>
-            <p>技术支持：<a href="https://ruffle.rs" target="_blank">Ruffle官方网站</a></p>
-        </div>
-    </div>
+    <div id="status">状态：等待Ruffle就绪...</div>
+    <!-- 游戏播放器 -->
+    <ruffle-player id="gamePlayer" width="800" height="600">
+        <a href="d1.swf"></a>
+    </ruffle-player>
 
     <script>
-        // 状态检测和UI更新
-        function updateStatus(type, message) {
-            const statusEl = document.getElementById('statusText');
-            statusEl.className = `status ${type}`;
-            statusEl.textContent = message;
-        }
+        const statusEl = document.getElementById('status');
+        const playerEl = document.getElementById('gamePlayer');
+        let checkAttempts = 0;
+        const maxAttempts = 10; // 最多尝试10次
 
-        // 全屏功能
-        function fullscreen() {
-            const player = document.getElementById('gamePlayer');
-            if (player.requestFullscreen) {
-                player.requestFullscreen();
-            } else if (player.webkitRequestFullscreen) {
-                player.webkitRequestFullscreen();
-            }
-        }
-
-        // 手动检查状态
-        function checkStatus() {
-            const player = document.getElementById('gamePlayer');
-            if (player.shadowRoot) {
-                updateStatus('success', '✅ Ruffle播放器运行正常！');
-            } else {
-                updateStatus('error', '❌ Ruffle播放器未正常加载');
-            }
-        }
-
-        // 页面加载完成后的检测
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                const player = document.getElementById('gamePlayer');
-                if (player.shadowRoot) {
-                    updateStatus('success', '✅ 游戏加载成功！请开始游玩。');
+        // 核心：主动检查并尝试初始化Ruffle播放器
+        function tryInitializeRuffle() {
+            checkAttempts++;
+            
+            // 关键检查1: Ruffle全局对象是否存在
+            if (!window.RufflePlayer) {
+                statusEl.textContent = `状态：尝试中 (${checkAttempts}/10) - 等待Ruffle库...`;
+                if (checkAttempts < maxAttempts) {
+                    setTimeout(tryInitializeRuffle, 500);
                 } else {
-                    updateStatus('error', '❌ Ruffle加载失败，请检查控制台或刷新重试。');
-                    console.error('Ruffle加载失败：播放器元素未被正确初始化');
+                    statusEl.textContent = '状态：❌ 失败 - Ruffle库未加载。请检查网络或CDN。';
+                    statusEl.style.color = 'red';
                 }
-            }, 3000);
-        });
-
-        // 监听Ruffle就绪事件
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.RufflePlayer) {
-                updateStatus('loading', '🟡 Ruffle引擎就绪，正在加载游戏内容...');
+                return;
             }
+
+            // 关键检查2: Ruffle是否已接管播放器元素（通过shadowRoot判断）
+            if (playerEl.shadowRoot) {
+                statusEl.textContent = '状态：✅ 成功 - Ruffle播放器已激活！';
+                statusEl.style.color = 'green';
+                console.log('✅ Ruffle初始化成功。');
+                return;
+            }
+
+            // 如果库已加载但未接管，尝试调用Ruffle的初始化方法
+            if (window.RufflePlayer && window.RufflePlayer.config) {
+                try {
+                    // 尝试手动初始化所有ruffle-player元素
+                    window.RufflePlayer = window.RufflePlayer || {};
+                    window.RufflePlayer.config = {
+                        "publicPath": "https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@2024.10.14/",
+                        "polyfills": true // 启用兼容性垫片
+                    };
+                    
+                    // 重要：触发Ruffle重新扫描并初始化播放器
+                    if (window.RufflePlayer.load) {
+                        window.RufflePlayer.load();
+                    }
+                } catch (e) {
+                    console.warn('手动初始化尝试失败:', e);
+                }
+            }
+
+            // 继续检查，直到达到最大尝试次数
+            if (checkAttempts < maxAttempts) {
+                statusEl.textContent = `状态：尝试中 (${checkAttempts}/10) - 正在初始化引擎...`;
+                setTimeout(tryInitializeRuffle, 500);
+            } else {
+                statusEl.textContent = '状态：❌ 失败 - Ruffle引擎无法启动。请更换浏览器或设备测试。';
+                statusEl.style.color = 'red';
+                console.error('❌ Ruffle初始化最终失败。此环境可能不兼容。');
+            }
+        }
+
+        // 页面加载后开始初始化尝试
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(tryInitializeRuffle, 100);
         });
     </script>
 </body>
