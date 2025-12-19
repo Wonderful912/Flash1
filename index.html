@@ -1,14 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Player</title>
-    <!-- 使用固定版本Ruffle，避免最新版不兼容 -->
-    <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@2024.10.14"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        #status { margin: 20px; font-weight: bold; padding: 10px; border-radius: 5px; }
+        .loading { background: #fff3cd; color: #856404; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
 </head>
 <body>
-    <div id="status">状态：等待Ruffle就绪...</div>
-    <!-- 游戏播放器 -->
+    <h3>Flash游戏播放器 (CORB问题修复版)</h3>
+    <div id="status" class="loading">状态：准备加载Ruffle库...</div>
     <ruffle-player id="gamePlayer" width="800" height="600">
         <a href="d1.swf"></a>
     </ruffle-player>
@@ -16,67 +22,74 @@
     <script>
         const statusEl = document.getElementById('status');
         const playerEl = document.getElementById('gamePlayer');
-        let checkAttempts = 0;
-        const maxAttempts = 10; // 最多尝试10次
+        let ruffleLoaded = false;
 
-        // 核心：主动检查并尝试初始化Ruffle播放器
-        function tryInitializeRuffle() {
-            checkAttempts++;
-            
-            // 关键检查1: Ruffle全局对象是否存在
-            if (!window.RufflePlayer) {
-                statusEl.textContent = `状态：尝试中 (${checkAttempts}/10) - 等待Ruffle库...`;
-                if (checkAttempts < maxAttempts) {
-                    setTimeout(tryInitializeRuffle, 500);
-                } else {
-                    statusEl.textContent = '状态：❌ 失败 - Ruffle库未加载。请检查网络或CDN。';
-                    statusEl.style.color = 'red';
-                }
-                return;
-            }
-
-            // 关键检查2: Ruffle是否已接管播放器元素（通过shadowRoot判断）
-            if (playerEl.shadowRoot) {
-                statusEl.textContent = '状态：✅ 成功 - Ruffle播放器已激活！';
-                statusEl.style.color = 'green';
-                console.log('✅ Ruffle初始化成功。');
-                return;
-            }
-
-            // 如果库已加载但未接管，尝试调用Ruffle的初始化方法
-            if (window.RufflePlayer && window.RufflePlayer.config) {
-                try {
-                    // 尝试手动初始化所有ruffle-player元素
-                    window.RufflePlayer = window.RufflePlayer || {};
-                    window.RufflePlayer.config = {
-                        "publicPath": "https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@2024.10.14/",
-                        "polyfills": true // 启用兼容性垫片
-                    };
-                    
-                    // 重要：触发Ruffle重新扫描并初始化播放器
-                    if (window.RufflePlayer.load) {
-                        window.RufflePlayer.load();
-                    }
-                } catch (e) {
-                    console.warn('手动初始化尝试失败:', e);
-                }
-            }
-
-            // 继续检查，直到达到最大尝试次数
-            if (checkAttempts < maxAttempts) {
-                statusEl.textContent = `状态：尝试中 (${checkAttempts}/10) - 正在初始化引擎...`;
-                setTimeout(tryInitializeRuffle, 500);
+        // 策略1：检测Ruffle脚本是否成功加载
+        function checkScriptLoaded() {
+            if (window.RufflePlayer) {
+                ruffleLoaded = true;
+                statusEl.textContent = '状态：✅ Ruffle库加载成功，正在初始化播放器...';
+                statusEl.className = 'loading';
+                initializePlayer();
             } else {
-                statusEl.textContent = '状态：❌ 失败 - Ruffle引擎无法启动。请更换浏览器或设备测试。';
-                statusEl.style.color = 'red';
-                console.error('❌ Ruffle初始化最终失败。此环境可能不兼容。');
+                statusEl.textContent = '状态：❌ 主要CDN加载失败，尝试备用源...';
+                statusEl.className = 'error';
+                loadFallbackScript(); // 启动备用方案
             }
         }
 
-        // 页面加载后开始初始化尝试
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(tryInitializeRuffle, 100);
-        });
+        // 策略2：备用方案 - 加载另一个源的Ruffle
+        function loadFallbackScript() {
+            const fallbackScript = document.createElement('script');
+            // 尝试从Ruffle官方域名加载（可能规避CORB）
+            fallbackScript.src = 'https://ruffle.rs/ruffle.js';
+            fallbackScript.onload = function() {
+                statusEl.textContent = '状态：⚠️ 备用源加载成功，正在初始化...';
+                statusEl.className = 'loading';
+                ruffleLoaded = true;
+                initializePlayer();
+            };
+            fallbackScript.onerror = function() {
+                statusEl.innerHTML = '状态：❌ 所有来源均被阻止。<br><strong>根本原因：您的浏览器安全策略（CORB）过于严格，已阻止加载必要的游戏引擎。</strong><br>请尝试：1. 更换浏览器（如Chrome）；2. 在电脑上访问。';
+                statusEl.className = 'error';
+            };
+            document.head.appendChild(fallbackScript);
+        }
+
+        // 初始化播放器
+        function initializePlayer() {
+            let attempts = 0;
+            const maxAttempts = 20; // 增加尝试次数
+
+            function checkPlayer() {
+                attempts++;
+                if (playerEl.shadowRoot) {
+                    statusEl.textContent = '状态：🎉 成功！Flash游戏正在运行。';
+                    statusEl.className = 'success';
+                    return;
+                }
+                if (attempts < maxAttempts) {
+                    setTimeout(checkPlayer, 300);
+                } else {
+                    statusEl.innerHTML = '状态：❌ 播放器初始化超时。<br>Ruffle库已加载，但无法启动引擎。<br>这通常是<b>设备浏览器内核过旧</b>导致，建议使用电脑Chrome/Edge浏览器测试。';
+                    statusEl.className = 'error';
+                }
+            }
+            setTimeout(checkPlayer, 100);
+        }
+
+        // 主执行逻辑
+        statusEl.textContent = '状态：正在从CDN加载Ruffle库...';
+        // 创建并监控主要的Ruffle脚本标签
+        const mainScript = document.createElement('script');
+        mainScript.src = 'https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle';
+        mainScript.onload = checkScriptLoaded;
+        mainScript.onerror = function() {
+            // 如果直接加载失败，也触发备用方案
+            statusEl.textContent = '状态：❌ 网络请求被阻止，启动备用方案...';
+            loadFallbackScript();
+        };
+        document.head.appendChild(mainScript);
     </script>
 </body>
 </html>
