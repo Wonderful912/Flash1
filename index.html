@@ -1,11 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <meta charset="UTF-8">
+    <title>Flash Game Player</title>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <style>
+        body { text-align: center; font-family: sans-serif; padding: 20px; }
+        #status { color: #666; margin: 20px; }
+        #game-container { margin: 20px auto; display: inline-block; }
+    </style>
 </head>
 <body>
-<ruffle-player width="800" height="600">
-<a href="d1.swf"></a>
-</ruffle-player>
+    <h2>Flash Game</h2>
+    <div id="status">正在加载 Ruffle 播放器...</div>
+    <div id="game-container">
+        <!-- 核心：这里加载游戏 -->
+        <ruffle-player id="player" width="800" height="600">
+            <a href="d1.swf"></a>
+        </ruffle-player>
+    </div>
+
+    <script>
+        // 当Ruffle加载后，检查状态
+        window.addEventListener('load', function() {
+            const player = document.getElementById('player');
+            const status = document.getElementById('status');
+
+            // 设置一个超时检查，如果Ruffle长时间未激活，提示用户
+            setTimeout(function() {
+                // 检查播放器是否已由Ruffle接管（样式或属性会变）
+                if (player.shadowRoot) {
+                    status.textContent = "Ruffle 播放器已激活。";
+                } else {
+                    status.textContent = "Ruffle 播放器加载异常，请尝试刷新页面。";
+                    status.style.color = "red";
+                }
+            }, 3000); // 等待3秒后检查
+        });
+    </script>
 </body>
 </html>
